@@ -72,11 +72,9 @@ class ReSpeakerNode(Node):
         # TODO: Chosen topics are dummy topics.
         self.subscription = self.create_subscription(String, "commandTopic", self.command_callback, 10)
 
-        # TODO: QoS policy declaration is somewhat messy, and perhaps incomplete.
-        publisher_qos_policy = rclpy.qos.QoSProfile(reliability=rclpy.qos.ReliabilityPolicy.BEST_EFFORT,
-                                                    history=rclpy.qos.HistoryPolicy.SYSTEM_DEFAULT)
+        # TODO: QoS policy could be either qos_profile_system_default or qos_profile_sensor_data
         # TODO: Message type is Int16MultiArray, but could probably be replaced by a simpler array with metadata
-        self.publisher = self.create_publisher(Int16MultiArray, "outTopic", publisher_qos_policy)
+        self.publisher = self.create_publisher(Int16MultiArray, "outTopic", rclpy.qos.qos_profile_sensor_data)
 
         # Status LED parameters, initialized to blinking green
         self._current_spectrum = LED_SPECTRUM_INACTIVE
