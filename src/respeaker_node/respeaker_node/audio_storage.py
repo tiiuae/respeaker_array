@@ -22,10 +22,9 @@ class AudioStorageNode(Node):
         self._pa = pyaudio.PyAudio()
 
         self._count = 0
-        qos_policy = rclpy.qos.QoSProfile(reliability=rclpy.qos.ReliabilityPolicy.BEST_EFFORT,
-                                          history=rclpy.qos.HistoryPolicy.SYSTEM_DEFAULT)
 
-        self.subscription = self.create_subscription(Int16MultiArray, "outTopic", self.callback, qos_policy)
+        # TODO: QoS_policy should match the one in the publisher
+        self.subscription = self.create_subscription(Int16MultiArray, "outTopic", self.callback, rclpy.qos.qos_profile_sensor_data)
         self._outfile = "test"
 
         self._timer = self.create_timer(10, self.store_audio)
