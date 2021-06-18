@@ -72,7 +72,11 @@ def main(args=None):
 
     audiostorage = AudioStorageNode()
 
-    rclpy.spin(audiostorage)
+    try:
+        rclpy.spin(audiostorage)
+
+    except KeyboardInterrupt:
+        pass
 
     # Destroy the node explicitly
     # (optional - otherwise it will be done automatically
