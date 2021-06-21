@@ -5,7 +5,7 @@ import wave
 import rclpy
 from rclpy.node import Node
 import rclpy.qos
-from std_msgs.msg import Int16MultiArray
+from respeaker_msgs.msg import AudioBuffer
 
 SAMPLE_RATE = 48000
 SAMPLE_WIDTH = 2
@@ -23,8 +23,9 @@ class AudioStorageNode(Node):
 
         self._count = 0
 
-        # TODO: QoS_policy should match the one in the publisher
-        self.subscription = self.create_subscription(Int16MultiArray, "outTopic", self.callback, rclpy.qos.qos_profile_sensor_data)
+        # QoS_policy should match the one defined in the publisher
+        self.subscription = self.create_subscription(AudioBuffer, "RawAudio_PubSubTopic", self.callback,
+                                                     rclpy.qos.qos_profile_sensor_data)
         self._outfile = "test"
 
         self._timer = self.create_timer(10, self.store_audio)

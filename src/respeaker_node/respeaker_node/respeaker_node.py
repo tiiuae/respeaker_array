@@ -1,7 +1,8 @@
 import rclpy
 import rclpy.qos
 from rclpy.node import Node
-from std_msgs.msg import Int16MultiArray, String, MultiArrayDimension
+from std_msgs.msg import String
+from respeaker_msgs.msg import AudioBuffer
 
 import numpy as np
 import pyaudio
@@ -69,12 +70,11 @@ class ReSpeakerNode(Node):
             stream_callback=self.audio_callback,
             frames_per_buffer=self._audio_buffer_size)
 
-        # TODO: Chosen topics are dummy topics.
-        self.subscription = self.create_subscription(String, "commandTopic", self.command_callback, 10)
+        self.subscription = self.create_subscription(String, "RespeakerArray_ctrl", self.command_callback, 10)
 
         # TODO: QoS policy could be either qos_profile_system_default or qos_profile_sensor_data
-        # TODO: Message type is Int16MultiArray, but could probably be replaced by a simpler array with metadata
-        self.publisher = self.create_publisher(Int16MultiArray, "outTopic", rclpy.qos.qos_profile_sensor_data)
+        self.publisher = self.create_publisher(AudioBuffer, "RawAudio_PubSubTopic",
+                                               rclpy.qos.qos_profile_sensor_data)
 
         # Status LED parameters, initialized to blinking green
         self._current_spectrum = LED_SPECTRUM_INACTIVE
@@ -109,12 +109,14 @@ class ReSpeakerNode(Node):
         """
         if not self._paused:
             raw_audio = np.frombuffer(in_data, dtype=np.int16).tolist()
-            msg = Int16MultiArray()
-            msg.layout.dim.append(MultiArrayDimension())
-            msg.layout.dim[0].size = len(raw_audio)
-            msg.layout.dim[0].stride = 1
-            # Dummy label
-            msg.layout.dim[0].label = "x"
+            # msg = Int16MultiArray()
+            # msg.layout.dim.append(MultiArrayDimension())
+            # msg.layout.dim[0].size = len(raw_audio)
+            # msg.layout.dim[0].stride = 1
+            # # Dummy label
+            # msg.layout.dim[0].label = "x"
+            msg = AudioBuffer()
+            msg.num_frames = len(raw_audio)
             msg.data = raw_audio
             self.publisher.publish(msg)
         return None, pyaudio.paContinue
