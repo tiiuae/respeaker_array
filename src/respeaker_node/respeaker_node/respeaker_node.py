@@ -1,12 +1,15 @@
 import rclpy
 import rclpy.qos
 from rclpy.node import Node
+
+import usb.util
+import usb.core
+
 from std_msgs.msg import String
 from respeaker_msgs.msg import AudioBuffer
 
 import numpy as np
 import pyaudio
-from pixel_ring import pixel_ring
 
 
 # Red spectrum for active, green for inactive
@@ -49,6 +52,30 @@ def find_device_info(p):
         raise IOError
 
 
+def send_usb_command(device, cmd, data=(0,), timeout=1000):
+    """
+    The function is used to control the LEDs of the microphone array, although it could
+    be used with other devices as well.
+    :param device: Device handle
+    :param cmd: Command number. 1 to change all the LEDs to a certain color.
+    :param data: The color data, as a list [r, g, b, 0]
+    :param timeout: timeout value for the USB operation
+    :return: None
+    """
+    device.ctrl_transfer(usb.util.CTRL_OUT | usb.util.CTRL_TYPE_VENDOR | usb.util.CTRL_RECIPIENT_DEVICE,
+                         0, cmd, 0x1C, data, timeout)
+
+
+def set_LED_color(device, color):
+    # Sets all the LEDs of the device to given color
+    send_usb_command(device, 1, hex_to_rgb(color))
+
+
+def hex_to_rgb(color):
+    # Converts hex color to a list with rgb values
+    return [(color >> 16) & 0xff, (color >> 8) & 0xff, color & 0xff, 0]
+
+
 class ReSpeakerNode(Node):
     def __init__(self):
         super().__init__("respeaker_node")
@@ -77,6 +104,7 @@ class ReSpeakerNode(Node):
                                                rclpy.qos.qos_profile_sensor_data)
 
         # Status LED parameters, initialized to blinking green
+        self._device = usb.core.find(idVendor=0x2886, idProduct=0x0018)
         self._current_spectrum = LED_SPECTRUM_INACTIVE
         self._LED_spectrum_index = 0
         self._status_LED_update_period_s = self.get_parameter("status_LED_update_period_s").value
@@ -143,7 +171,7 @@ class ReSpeakerNode(Node):
 
     def status_LED_update_callback(self):
         # Changes the LED color gradually
-        pixel_ring.mono(self._current_spectrum[self._LED_spectrum_index])
+        set_LED_color(self._device, self._current_spectrum[self._LED_spectrum_index])
         self._LED_spectrum_index += LED_SPECTRUM_SKIP
         self._LED_spectrum_index %= len(self._current_spectrum)
 
