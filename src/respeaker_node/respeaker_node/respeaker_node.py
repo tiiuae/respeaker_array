@@ -137,12 +137,6 @@ class ReSpeakerNode(Node):
         """
         if not self._paused:
             raw_audio = np.frombuffer(in_data, dtype=np.int16).tolist()
-            # msg = Int16MultiArray()
-            # msg.layout.dim.append(MultiArrayDimension())
-            # msg.layout.dim[0].size = len(raw_audio)
-            # msg.layout.dim[0].stride = 1
-            # # Dummy label
-            # msg.layout.dim[0].label = "x"
             msg = AudioBuffer()
             msg.num_frames = len(raw_audio)
             msg.data = raw_audio
