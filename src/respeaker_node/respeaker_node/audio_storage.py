@@ -31,6 +31,9 @@ class AudioStorageNode(Node):
         self._timer = self.create_timer(10, self.store_audio)
 
     def store_audio(self):
+        if not any(self._frames):
+            self.get_logger().info("No frames received: files not written")
+            return
         if self._stored_channels & 0b100:
             self.get_logger().info("Writing processed audio into {:s}{:d}.wav".format(self._outfile, self._count))
             wf = wave.open("{:s}{:d}.wav".format(self._outfile, self._count), 'wb')
