@@ -32,7 +32,7 @@ class AudioStorageNode(Node):
 
     def store_audio(self):
         if self._stored_channels & 0b100:
-            print("Writing processed audio into {:s}{:d}.wav".format(self._outfile, self._count))
+            self.get_logger().info("Writing processed audio into {:s}{:d}.wav".format(self._outfile, self._count))
             wf = wave.open("{:s}{:d}.wav".format(self._outfile, self._count), 'wb')
             wf.setnchannels(1)
             wf.setsampwidth(self._pa.get_sample_size(self._pa.get_format_from_width(SAMPLE_WIDTH)))
@@ -41,9 +41,9 @@ class AudioStorageNode(Node):
             wf.close()
 
         if self._stored_channels & 0b10:
-            print("Writing raw audio files for each microphone")
+            self.get_logger().info("Writing raw audio files for each microphone")
             for j in range(4):
-                print("Writing raw audio into {:s}{:d}.wav".format(self._outfile, self._count))
+                self.get_logger().info("Writing raw audio into {:s}{:d}.wav".format(self._outfile, self._count))
                 wf = wave.open("{:s}_rawch{:d}_{:d}.wav".format(self._outfile, j, self._count), 'wb')
                 wf.setnchannels(1)
                 wf.setsampwidth(self._pa.get_sample_size(self._pa.get_format_from_width(SAMPLE_WIDTH)))
@@ -52,7 +52,7 @@ class AudioStorageNode(Node):
                 wf.close()
 
         if self._stored_channels & 0b1:
-            print("Writing background audio into {:s}{:d}.wav".format(self._outfile, self._count))
+            self.get_logger().info("Writing background audio into {:s}{:d}.wav".format(self._outfile, self._count))
             wf = wave.open("{:s}_bg_{:d}.wav".format(self._outfile, self._count), 'wb')
             wf.setnchannels(1)
             wf.setsampwidth(self._pa.get_sample_size(self._pa.get_format_from_width(SAMPLE_WIDTH)))
