@@ -7,7 +7,15 @@ import usb.core
 
 from std_msgs.msg import String
 from respeaker_msgs.msg import AudioBuffer
-from px4_msgs.msg import VehicleStatus
+
+PX4_PRESENT = False
+try:
+    from px4_msgs.msg import VehicleStatus
+    PX4_PRESENT = True
+except:
+    pass
+
+from time import time
 
 import numpy as np
 import pyaudio
@@ -104,8 +112,9 @@ class ReSpeakerNode(Node):
             frames_per_buffer=self._audio_buffer_size)
 
         self._control_sub = self.create_subscription(String, "RespeakerArray_ctrl", self.command_callback, 10)
-        self._vehicle_status_sub = self.create_subscription(VehicleStatus, "VehicleStatus_PubSubTopic",
-                                                            self.vehicle_status_callback, 10)
+        if PX4_PRESENT:
+            self._vehicle_status_sub = self.create_subscription(VehicleStatus, "VehicleStatus_PubSubTopic",
+                                                                self.vehicle_status_callback, 10)
 
         # TODO: QoS policy could be either qos_profile_system_default or qos_profile_sensor_data
         self.publisher = self.create_publisher(AudioBuffer, "RawAudio_PubSubTopic",
@@ -138,13 +147,18 @@ class ReSpeakerNode(Node):
             command = command.split(" ")[0]
 
         if command == "start":
-            self._recording_started_time = self._latest_timestamp
+            if self._latest_timestamp:
+                self._recording_started_time = self._latest_timestamp
+            else:
+                self._recording_started_time = int(time())
             self.start_publishing()
         elif command == "stop":
             self._recording_started_time = 0
             self.stop_publishing()
 
     def vehicle_status_callback(self, msg):
+        if not PX4_PRESENT:
+            return
         self._latest_timestamp = msg.timestamp
         if not self._override:
             arming_state = msg.arming_state
