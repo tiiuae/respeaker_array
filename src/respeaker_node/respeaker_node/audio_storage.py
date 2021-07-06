@@ -76,7 +76,7 @@ class AudioStorageNode(Node):
 
     def callback(self, msg):
         if self._path is None:
-            self._path = msg.recording_starter_time
+            self._path = msg.recording_started_time
             print(self._path)
             self.create_dirs()
         a = msg.data

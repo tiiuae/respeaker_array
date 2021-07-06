@@ -171,7 +171,7 @@ class ReSpeakerNode(Node):
         if not self._paused:
             raw_audio = np.frombuffer(in_data, dtype=np.int16).tolist()
             msg = AudioBuffer()
-            msg.recording_starter_time = self._recording_started_time
+            msg.recording_started_time = self._recording_started_time
             msg.data = raw_audio
             self.publisher.publish(msg)
         return None, pyaudio.paContinue
