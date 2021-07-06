@@ -15,6 +15,7 @@
   <exec_depend>rclpy</exec_depend>
   <exec_depend>std_msgs</exec_depend>
   <exec_depend>respeaker_msgs</exec_depend>
+  <exec_depend>px4_msgs</exec_depend>
   <exec_depend>python3-numpy</exec_depend>
   <exec_depend>python3-pyaudio</exec_depend>
   <exec_depend>python3-usb</exec_depend>
