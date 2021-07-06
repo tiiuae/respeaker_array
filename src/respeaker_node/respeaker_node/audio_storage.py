@@ -14,7 +14,7 @@ SAMPLE_WIDTH = 2
 class AudioStorageNode(Node):
     def __init__(self):
         super().__init__("audiostorage_node")
-        self.declare_parameter("stored_channel_flags", 0b100)
+        self.declare_parameter("stored_channel_flags", 0b110)
 
         self._stored_channels = self.get_parameter("stored_channel_flags").value
         self._frames = [[], [], [], [], [], []]
@@ -46,7 +46,7 @@ class AudioStorageNode(Node):
 
         if self._stored_channels & 0b100:
             self.get_logger().info("Writing processed audio into {:s}{:d}.wav".format(self._outfile, self._count))
-            wf = wave.open(self._outfile.format(self._recording_started_time, 0, self._count), 'wb')
+            wf = wave.open(self._target_dir + self._outfile.format(self._recording_started_time, 0, self._count), 'wb')
             wf.setnchannels(1)
             wf.setsampwidth(self._pa.get_sample_size(self._pa.get_format_from_width(SAMPLE_WIDTH)))
             wf.setframerate(SAMPLE_RATE)
@@ -55,9 +55,9 @@ class AudioStorageNode(Node):
 
         if self._stored_channels & 0b10:
             self.get_logger().info("Writing raw audio files for each microphone")
-            for j in range(4):
+            for j in range(1, 5):
                 self.get_logger().info("Writing raw audio into {:s}{:d}.wav".format(self._outfile, self._count))
-                wf = wave.open(self._outfile.format(self._recording_started_time, j + 1, self._count), 'wb')
+                wf = wave.open(self._target_dir + self._outfile.format(self._recording_started_time, j, self._count), 'wb')
                 wf.setnchannels(1)
                 wf.setsampwidth(self._pa.get_sample_size(self._pa.get_format_from_width(SAMPLE_WIDTH)))
                 wf.setframerate(SAMPLE_RATE)
@@ -66,7 +66,7 @@ class AudioStorageNode(Node):
 
         if self._stored_channels & 0b1:
             self.get_logger().info("Writing background audio into {:s}{:d}.wav".format(self._outfile, self._count))
-            wf = wave.open(self._outfile.format(self._recording_started_time, 5, self._count), 'wb')
+            wf = wave.open(self._target_dir + self._outfile.format(self._recording_started_time, 5, self._count), 'wb')
             wf.setnchannels(1)
             wf.setsampwidth(self._pa.get_sample_size(self._pa.get_format_from_width(SAMPLE_WIDTH)))
             wf.setframerate(SAMPLE_RATE)
@@ -81,7 +81,7 @@ class AudioStorageNode(Node):
             print(self._recording_started_time)
             self.create_dirs()
         a = msg.data
-        for j in range(5):
+        for j in range(6):
             self._frames[j].append(a[j::6].tostring())
 
     def create_dirs(self):
@@ -99,7 +99,7 @@ class AudioStorageNode(Node):
 
 def combine_files(path, subdir):
     source_dir = path + subdir + "/"
-    infiles = os.listdir(source_dir)
+    infiles = sorted(os.listdir(source_dir), key=lambda file: int(file.split(".")[0]))
     outfile = path + subdir + ".wav"
 
     if infiles:
