@@ -1,2 +1,2 @@
-int64 num_frames
+int64 recording_starter_time
 int16[] data

@@ -1,7 +1,5 @@
 import pyaudio
-import numpy as np
 import wave
-from time import time
 from os import mkdir, rmdir, remove, listdir
 
 import rclpy
@@ -78,7 +76,7 @@ class AudioStorageNode(Node):
 
     def callback(self, msg):
         if self._path is None:
-            self._path = int(time())
+            self._path = msg.recording_starter_time
             print(self._path)
             self.create_dirs()
         a = msg.data

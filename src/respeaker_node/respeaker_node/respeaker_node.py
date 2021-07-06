@@ -7,6 +7,7 @@ import usb.core
 
 from std_msgs.msg import String
 from respeaker_msgs.msg import AudioBuffer
+from px4_msgs.msg import VehicleStatus
 
 import numpy as np
 import pyaudio
@@ -83,6 +84,11 @@ class ReSpeakerNode(Node):
         self.declare_parameter("audio_buffer_size", 256)
 
         self._paused = True
+        self._recording_started_time = 0
+        self._latest_timestamp = 0
+        # Overrides all non-manual commands. If manual control is required, automatic commands
+        # should usually be ignored.
+        self._override = False
 
         self._pa = pyaudio.PyAudio()
         device_index, channels, sample_rate = find_device_info(self._pa)
@@ -97,7 +103,9 @@ class ReSpeakerNode(Node):
             stream_callback=self.audio_callback,
             frames_per_buffer=self._audio_buffer_size)
 
-        self.subscription = self.create_subscription(String, "RespeakerArray_ctrl", self.command_callback, 10)
+        self._control_sub = self.create_subscription(String, "RespeakerArray_ctrl", self.command_callback, 10)
+        self._vehicle_status_sub = self.create_subscription(VehicleStatus, "VehicleStatus_PubSubTopic",
+                                                            self.vehicle_status_callback, 10)
 
         # TODO: QoS policy could be either qos_profile_system_default or qos_profile_sensor_data
         self.publisher = self.create_publisher(AudioBuffer, "RawAudio_PubSubTopic",
@@ -120,10 +128,35 @@ class ReSpeakerNode(Node):
     def command_callback(self, msg):
         # Start or stop the stream depending on the command.
         command = msg.data
+        # Set override by default
+        self._override = True
+        # Turn override off if required
+        if command == "release":
+            self._override = False
+        if "-no" in command or "--non-overriding" in command:
+            self._override = False
+            command = command.split(" ")[0]
+
         if command == "start":
+            self._recording_started_time = self._latest_timestamp
             self.start_publishing()
         elif command == "stop":
+            self._recording_started_time = 0
             self.stop_publishing()
+
+    def vehicle_status_callback(self, msg):
+        self._latest_timestamp = msg.timestamp
+        if not self._override:
+            arming_state = msg.arming_state
+            if self._paused and arming_state == 2:
+                self.get_logger().info("Vehicle armed, publishing raw audio.")
+                self._recording_started_time = msg.armed_time
+                self.start_publishing()
+
+            if not self._paused and arming_state == 1:
+                self.get_logger().info("Vehicle disarmed, publishing halted.")
+                self._recording_started_time = 0
+                self.stop_publishing()
 
     def audio_callback(self, in_data, frame_count, time_info, status):
         """
@@ -138,7 +171,7 @@ class ReSpeakerNode(Node):
         if not self._paused:
             raw_audio = np.frombuffer(in_data, dtype=np.int16).tolist()
             msg = AudioBuffer()
-            msg.num_frames = len(raw_audio)
+            msg.recording_starter_time = self._recording_started_time
             msg.data = raw_audio
             self.publisher.publish(msg)
         return None, pyaudio.paContinue
