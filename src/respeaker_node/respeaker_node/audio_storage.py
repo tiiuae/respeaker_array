@@ -1,6 +1,7 @@
 import pyaudio
 import wave
 import os
+import getpass
 
 import rclpy
 from rclpy.node import Node
@@ -28,7 +29,7 @@ class AudioStorageNode(Node):
         self.subscription = self.create_subscription(AudioBuffer, "RawAudio_PubSubTopic", self.callback,
                                                      rclpy.qos.qos_profile_sensor_data)
 
-        self._target_dir = "/home/{:s}/respeaker_records/".format(os.getlogin())
+        self._target_dir = "/home/{:s}/respeaker_records/".format(getpass.getuser())
         self._outfile = "audio_{:d}/ch{:d}/{:d}.wav"
 
         self._timer = self.create_timer(1, self.store_audio)
