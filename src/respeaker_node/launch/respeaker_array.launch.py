@@ -1,17 +1,18 @@
 from launch import LaunchDescription
 from launch_ros.actions import Node
+import getpass
 
 def generate_launch_description():
     return LaunchDescription([
         Node(
             package='respeaker_node',
-            namespace='mic_array',
+            namespace='{:s}'.format(getpass.getuser()),
             executable='mic_array',
-            name='mic'
+            name='mic_array'
         ),
         Node(
             package='respeaker_node',
-            namespace='audio_storage',
+            namespace='{:s}'.format(getpass.getuser()),
             executable='storage',
             name='audio_storage'
         )
