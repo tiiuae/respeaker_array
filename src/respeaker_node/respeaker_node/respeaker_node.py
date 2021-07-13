@@ -111,10 +111,12 @@ class ReSpeakerNode(Node):
             stream_callback=self.audio_callback,
             frames_per_buffer=self._audio_buffer_size)
 
-        self._control_sub = self.create_subscription(String, "RespeakerArray_ctrl", self.command_callback, 10)
+        self._control_sub = self.create_subscription(String, "RespeakerArray_ctrl", self.command_callback,
+                                                     rclpy.qos.qos_profile_system_default)
         if PX4_PRESENT:
             self._vehicle_status_sub = self.create_subscription(VehicleStatus, "VehicleStatus_PubSubTopic",
-                                                                self.vehicle_status_callback, 10)
+                                                                self.vehicle_status_callback,
+                                                                rclpy.qos.qos_profile_system_default)
 
         # TODO: QoS policy could be either qos_profile_system_default or qos_profile_sensor_data
         self.publisher = self.create_publisher(AudioBuffer, "RawAudio_PubSubTopic",
