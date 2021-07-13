@@ -1,0 +1,16 @@
+[Unit]
+Description=ReSpeaker mic service
+StopWhenUnneeded=true
+Before=respeaker_storage.service
+
+[Service]
+Type=simple
+User=kide
+Group=kide
+Restart=always
+RestartSec=5
+ExecStart=/bin/sh -c ". /opt/ros/foxy/setup.sh; . /media/veracrypt1/source/respeaker_array/install/setup.sh; ros2 run respeaker_node mic_array"
+
+[Install]
+WantedBy=multi-user.target
+RequiredBy=respeaker_storage.service
