@@ -1,7 +1,7 @@
 import pyaudio
 import wave
 import os
-import getpass
+from os import environ as env
 
 import rclpy
 from rclpy.node import Node
@@ -14,7 +14,8 @@ SAMPLE_WIDTH = 2
 
 class AudioStorageNode(Node):
     def __init__(self):
-        super().__init__("audiostorage_node")
+        super().__init__("audiostorage_node", namespace=(env.get("DRONE_DEVICE_ID") if
+                                                         env.get("DRONE_DEVICE_ID") else env.get("USER")))
         self.declare_parameter("stored_channel_flags", 0b110)
 
         self._stored_channels = self.get_parameter("stored_channel_flags").value
@@ -29,7 +30,7 @@ class AudioStorageNode(Node):
         self.subscription = self.create_subscription(AudioBuffer, "RawAudio_PubSubTopic", self.callback,
                                                      rclpy.qos.qos_profile_sensor_data)
 
-        self._target_dir = "/home/{:s}/respeaker_records/".format(getpass.getuser())
+        self._target_dir = "/home/{:s}/respeaker_records/".format(env.get("USER"))
         self._outfile = "audio_{:d}/ch{:d}/{:d}.wav"
 
         self._timer = self.create_timer(1, self.store_audio)
