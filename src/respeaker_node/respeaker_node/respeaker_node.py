@@ -88,8 +88,7 @@ def hex_to_rgb(color):
 
 class ReSpeakerNode(Node):
     def __init__(self):
-        super().__init__("respeaker_node", namespace=(env.get("DRONE_DEVICE_ID") if
-                                                      env.get("DRONE_DEVICE_ID") else env.get("USER")))
+        super().__init__("respeaker_node", namespace=(env.get("DRONE_DEVICE_ID", env.get("USER"))))
         self.declare_parameter("status_LED_update_period_s", 1 / 16)
         self.declare_parameter("audio_buffer_size", 256)
 

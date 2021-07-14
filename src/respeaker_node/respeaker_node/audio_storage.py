@@ -14,8 +14,7 @@ SAMPLE_WIDTH = 2
 
 class AudioStorageNode(Node):
     def __init__(self):
-        super().__init__("audiostorage_node", namespace=(env.get("DRONE_DEVICE_ID") if
-                                                         env.get("DRONE_DEVICE_ID") else env.get("USER")))
+        super().__init__("audiostorage_node", namespace=(env.get("DRONE_DEVICE_ID", env.get("USER"))))
         self.declare_parameter("stored_channel_flags", 0b110)
 
         self._stored_channels = self.get_parameter("stored_channel_flags").value
