@@ -145,9 +145,6 @@ class ReSpeakerNode(Node):
         # Turn override off if required
         if command == "release":
             self._override = False
-        if "-no" in command or "--non-overriding" in command:
-            self._override = False
-            command = command.split(" ")[0]
 
         if command == "start":
             if self._latest_timestamp:
@@ -170,7 +167,7 @@ class ReSpeakerNode(Node):
                 self._recording_started_time = msg.armed_time
                 self.start_publishing()
 
-            if not self._paused and arming_state == 1:
+            if not self._paused and arming_state != 2:
                 self.get_logger().info("Vehicle disarmed, publishing halted.")
                 self._recording_started_time = 0
                 self.stop_publishing()
