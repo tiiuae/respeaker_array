@@ -8,14 +8,14 @@ from rclpy.node import Node
 import rclpy.qos
 from respeaker_msgs.msg import AudioBuffer
 
-SAMPLE_RATE = 48000
+SAMPLE_RATE = 16000
 SAMPLE_WIDTH = 2
 
 
 class AudioStorageNode(Node):
     def __init__(self):
         super().__init__("audiostorage_node", namespace=(env.get("DRONE_DEVICE_ID", env.get("USER"))))
-        self.declare_parameter("stored_channel_flags", 0b110)
+        self.declare_parameter("stored_channel_flags", 0b010)
 
         self._stored_channels = self.get_parameter("stored_channel_flags").value
         self._frames = [[], [], [], [], [], []]
@@ -46,7 +46,7 @@ class AudioStorageNode(Node):
             return
 
         if self._stored_channels & 0b100:
-            self.get_logger().info("Writing processed audio into {:s}{:d}.wav".format(self._outfile, self._count))
+            self.get_logger().info("Writing processed audio into ch0/{:d}.wav".format(self._count))
             wf = wave.open(self._target_dir + self._outfile.format(self._recording_started_time, 0, self._count), 'wb')
             wf.setnchannels(1)
             wf.setsampwidth(self._pa.get_sample_size(self._pa.get_format_from_width(SAMPLE_WIDTH)))
@@ -57,7 +57,7 @@ class AudioStorageNode(Node):
         if self._stored_channels & 0b10:
             self.get_logger().info("Writing raw audio files for each microphone")
             for j in range(1, 5):
-                self.get_logger().info("Writing raw audio into {:s}{:d}.wav".format(self._outfile, self._count))
+                self.get_logger().info("Writing raw audio into ch{:d}/{:d}.wav".format(j, self._count))
                 wf = wave.open(self._target_dir + self._outfile.format(self._recording_started_time, j, self._count), 'wb')
                 wf.setnchannels(1)
                 wf.setsampwidth(self._pa.get_sample_size(self._pa.get_format_from_width(SAMPLE_WIDTH)))
@@ -66,7 +66,7 @@ class AudioStorageNode(Node):
                 wf.close()
 
         if self._stored_channels & 0b1:
-            self.get_logger().info("Writing background audio into {:s}{:d}.wav".format(self._outfile, self._count))
+            self.get_logger().info("Writing background audio into ch5/{:d}.wav".format(self._count))
             wf = wave.open(self._target_dir + self._outfile.format(self._recording_started_time, 5, self._count), 'wb')
             wf.setnchannels(1)
             wf.setsampwidth(self._pa.get_sample_size(self._pa.get_format_from_width(SAMPLE_WIDTH)))
