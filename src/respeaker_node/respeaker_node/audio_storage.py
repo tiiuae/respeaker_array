@@ -59,6 +59,8 @@ class AudioStorageNode(Node):
                 self.get_logger().info("Publisher has stopped publishing, combining files.")
                 self.combine()
                 self._count = 0
+                self._consecutive_bad_results = 0
+                self._landing = False
                 self._recording_started_time = None
             self.check_params()
             return
