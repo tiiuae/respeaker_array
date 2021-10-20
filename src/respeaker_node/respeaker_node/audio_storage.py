@@ -8,6 +8,8 @@ from rclpy.node import Node
 import rclpy.qos
 from respeaker_msgs.msg import AudioBuffer
 
+from .deploy import call_with_path
+
 SAMPLE_RATE = 16000
 SAMPLE_WIDTH = 2
 
@@ -16,9 +18,16 @@ class AudioStorageNode(Node):
     def __init__(self):
         super().__init__("audiostorage_node", namespace=(env.get("DRONE_DEVICE_ID", env.get("USER"))))
         self.declare_parameter("stored_channel_flags", 0b010)
+        self.declare_parameter("land_after_damage", 0)
+        self.declare_parameter("bad_result_limit", 3)
 
         self._stored_channels = self.get_parameter("stored_channel_flags").value
         self._frames = [[], [], [], [], [], []]
+
+        self._land_after_damage = self.get_parameter("land_after_damage").value
+        self._limit = self.get_parameter("bad_result_limit").value
+        self._consecutive_bad_results = 0
+        self._landing = False
 
         self._pa = pyaudio.PyAudio()
 
@@ -34,6 +43,14 @@ class AudioStorageNode(Node):
 
         self._timer = self.create_timer(1, self.store_audio)
 
+    def check_params(self):
+        if self._recording_started_time is None and self._stored_channels != (new := self.get_parameter("stored_channel_flags").value):
+            self._stored_channels = new
+        if self._limit != (new := self.get_parameter("bad_result_limit").value):
+            self._limit = new
+        if self._land_after_damage != (new := self.get_parameter("land_after_damage").value):
+            self._land_after_damage = new
+
     def store_audio(self):
         if not any(self._frames):
             if not self._count:
@@ -43,6 +60,7 @@ class AudioStorageNode(Node):
                 self.combine()
                 self._count = 0
                 self._recording_started_time = None
+            self.check_params()
             return
 
         if self._stored_channels & 0b100:
@@ -55,8 +73,8 @@ class AudioStorageNode(Node):
             wf.close()
 
         if self._stored_channels & 0b10:
-            self.get_logger().info("Writing raw audio files for each microphone")
-            for j in range(1, 5):
+            # self.get_logger().info("Writing raw audio files for each microphone")
+            for j in range(1, 2):
                 self.get_logger().info("Writing raw audio into ch{:d}/{:d}.wav".format(j, self._count))
                 wf = wave.open(self._target_dir + self._outfile.format(self._recording_started_time, j, self._count), 'wb')
                 wf.setnchannels(1)
@@ -64,6 +82,17 @@ class AudioStorageNode(Node):
                 wf.setframerate(SAMPLE_RATE)
                 wf.writeframes(b''.join(self._frames[j]))
                 wf.close()
+                result = call_with_path(self._target_dir + self._outfile.format(self._recording_started_time, j, self._count))
+                self.get_logger().info("Model result: {:d}".format(result))
+                if not result:
+                    self._consecutive_bad_results = 0
+                else:
+                    self._consecutive_bad_results += 1
+                    if self._consecutive_bad_results >= self._limit:
+                        self.get_logger().fatal("FAILURE: {:d} CONSECUTIVE BAD RESULTS!".format(self._consecutive_bad_results))
+                        if not self._landing and self._land_after_damage:
+                            self._landing = True
+                            self.get_logger().fatal("LANDING IMMEDIATELY")
 
         if self._stored_channels & 0b1:
             self.get_logger().info("Writing background audio into ch5/{:d}.wav".format(self._count))
@@ -73,8 +102,10 @@ class AudioStorageNode(Node):
             wf.setframerate(SAMPLE_RATE)
             wf.writeframes(b''.join(self._frames[5]))
             wf.close()
+
         self._frames = [[], [], [], [], [], []]
         self._count += 1
+        self.check_params()
 
     def callback(self, msg):
         if self._recording_started_time is None:
