@@ -8,6 +8,7 @@ from rclpy.node import Node
 import rclpy.qos
 from respeaker_msgs.msg import AudioBuffer
 
+from std_srvs.srv import Trigger
 from .deploy import call_with_path
 
 SAMPLE_RATE = 16000
@@ -28,6 +29,7 @@ class AudioStorageNode(Node):
         self._limit = self.get_parameter("bad_result_limit").value
         self._consecutive_bad_results = 0
         self._landing = False
+        self._future = None
 
         self._pa = pyaudio.PyAudio()
 
@@ -42,6 +44,22 @@ class AudioStorageNode(Node):
         self._outfile = "audio_{:d}/ch{:d}/{:d}.wav"
 
         self._timer = self.create_timer(1, self.store_audio)
+
+    def __wait_for_response(self, cmd):
+        while rclpy.ok():
+            rclpy.spin_once(self)
+            if self._future.done():
+                try:
+                    response = self._future.result()
+                except Exception as e:
+                    self.get_logger().info(
+                        'Service call failed %r' % (e,))
+                else:
+                    self.get_logger().error(
+                        'Result of %s: %s' % (cmd, response.message))
+                if response.success:
+                    self.get_logger().info('Command executed successfully.')
+                break
 
     def check_params(self):
         if self._recording_started_time is None and self._stored_channels != (new := self.get_parameter("stored_channel_flags").value):
@@ -84,17 +102,20 @@ class AudioStorageNode(Node):
                 wf.setframerate(SAMPLE_RATE)
                 wf.writeframes(b''.join(self._frames[j]))
                 wf.close()
-                result = call_with_path(self._target_dir + self._outfile.format(self._recording_started_time, j, self._count))
+                result = call_with_path(self._target_dir + self._outfile.format(self._recording_started_time, j,
+                                                                                self._count))
                 self.get_logger().info("Model result: {:d}".format(result))
                 if not result:
                     self._consecutive_bad_results = 0
                 else:
                     self._consecutive_bad_results += 1
                     if self._consecutive_bad_results >= self._limit:
-                        self.get_logger().fatal("FAILURE: {:d} CONSECUTIVE BAD RESULTS!".format(self._consecutive_bad_results))
+                        self.get_logger().fatal("FAILURE: {:d} CONSECUTIVE BAD RESULTS!".format(
+                                                                                         self._consecutive_bad_results))
                         if not self._landing and self._land_after_damage:
                             self._landing = True
                             self.get_logger().fatal("LANDING IMMEDIATELY")
+                            self.land()
 
         if self._stored_channels & 0b1:
             self.get_logger().info("Writing background audio into ch5/{:d}.wav".format(self._count))
@@ -129,6 +150,14 @@ class AudioStorageNode(Node):
     def combine(self):
         for j in range(6):
             combine_files(self._target_dir + "audio_{:d}/".format(self._recording_started_time), "ch{:d}".format(j))
+
+    def land(self):
+        cli = self.create_client(Trigger, '/{:s}/control_interface/land'.format(env["DRONE_DEVICE_ID"]))
+        while not cli.wait_for_service(timeout_sec=2.0):
+            self.get_logger().info('service not available, waiting again...')
+        req = Trigger.Request()
+        self._future = cli.call_async(req)
+        self.__wait_for_response('land')
 
 
 def combine_files(path, subdir):
