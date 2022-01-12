@@ -6,11 +6,11 @@ After=respeaker_mic.service
 
 [Service]
 Type=simple
-User=kide
-Group=kide
+User=sad
+Group=sad
 Restart=always
 RestartSec=5
-ExecStart=/bin/sh -c ". /opt/ros/foxy/setup.sh; . /media/veracrypt1/source/respeaker_array/install/setup.sh; ros2 run respeaker_node storage"
+ExecStart=/bin/sh -c ". /opt/ros/foxy/setup_fog.sh; . /home/sad/respeaker_array/install/setup.sh; ros2 run respeaker_node storage"
 
 [Install]
 WantedBy=multi-user.target
